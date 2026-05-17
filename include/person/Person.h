@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include "../notification/Notification.h"
 #include "../account/Account.h"
+#include <ostream> 
 
 class Person {
 private:
@@ -21,10 +22,12 @@ protected:
 
 public:
     Person(const int id, const std::string& name, const std::string& email, const std::string& phone);
+    Person(const Person& other);
     virtual ~Person() = default;
 
     virtual std::string getClientType() const = 0;
     virtual bool validate() const = 0;
+    virtual void printInfo() const;
 
     int getId() const noexcept;
     std::string getName() const noexcept;
@@ -34,4 +37,7 @@ public:
     void setEmail(const std::string& email);
     void setName(const std::string& name);
     void setPhone(const std::string& phone);
+
+    friend std::ostream& operator<<(std::ostream& out, const Person& p);
+    friend std::istream& operator>>(std::istream& in, Person& p);
 };
