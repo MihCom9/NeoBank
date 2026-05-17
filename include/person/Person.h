@@ -23,7 +23,7 @@ protected:
 public:
     Person(const int id, const std::string& name, const std::string& email, const std::string& phone);
     Person(const Person& other);
-    virtual ~Person() = default;
+    virtual ~Person();
 
     virtual std::string getClientType() const = 0;
     virtual bool validate() const = 0;
@@ -33,10 +33,12 @@ public:
     std::string getName() const noexcept;
     std::string getEmail() const noexcept;
     std::string getPhone() const noexcept;
+    const std::vector<Account*>& getAccounts() const noexcept;
 
     void setEmail(const std::string& email);
     void setName(const std::string& name);
     void setPhone(const std::string& phone);
+    void openAccount(Account* account);
 
     friend std::ostream& operator<<(std::ostream& out, const Person& p);
     friend std::istream& operator>>(std::istream& in, Person& p);
