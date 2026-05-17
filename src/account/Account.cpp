@@ -95,3 +95,59 @@ void Account::close() {
         throw std::runtime_error("Account is already closed");
     status = AccountStatus::CLOSED;
 }
+
+std::vector<Transaction> Account::getTransactionsByType(TransactionType type) const {
+    std::vector<Transaction> result;
+    for (const Transaction& t : transactions)
+        if (t.getType() == type)
+            result.push_back(t);
+    return result;
+}
+
+std::vector<Transaction> Account::getTransactionsByDateRange(std::time_t from, std::time_t to) const {
+    std::vector<Transaction> result;
+    for (const Transaction& t : transactions)
+        if (t.getTimestamp() >= from && t.getTimestamp() <= to)
+            result.push_back(t);
+    return result;
+}
+
+std::vector<Transaction> Account::getTransactionsByMinAmount(double min) const {
+    std::vector<Transaction> result;
+    for (const Transaction& t : transactions)
+        if (t.getAmount() >= min)
+            result.push_back(t);
+    return result;
+}
+
+void Account::printMonthlyStatement(int month, int year) const {
+    double totalIncome = 0;
+    double totalExpenses = 0;
+    int count = 0;
+
+    for (const Transaction& t : transactions) {
+        std::time_t ts = t.getTimestamp();
+        std::tm* tm = std::localtime(&ts);
+        if (tm->tm_mon + 1 != month || tm->tm_year + 1900 != year)
+            continue;
+        count++;
+        if (t.getType() == TransactionType::DEPOSIT)
+            totalIncome += t.getAmount();
+        else if (t.getType() == TransactionType::WITHDRAW)
+            totalExpenses += t.getAmount();
+        else if (t.getType() == TransactionType::TRANSFER) {
+            if (t.getSourceIban() == getIban())
+                totalExpenses += t.getAmount();
+            else
+                totalIncome += t.getAmount();
+        }
+    }
+
+    std::cout << "=== Monthly Statement " << month << "/" << year << " ===\n"
+              << "IBAN: " << getIban() << "\n"
+              << "Transactions: " << count << "\n"
+              << "Total income: " << totalIncome << " " << getCurrency() << "\n"
+              << "Total expenses: " << totalExpenses << " " << getCurrency() << "\n"
+              << "Net: " << (totalIncome - totalExpenses) << " " << getCurrency() << "\n"
+              << "Current balance: " << balance << " " << getCurrency() << "\n";
+}
