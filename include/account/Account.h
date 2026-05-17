@@ -1,11 +1,20 @@
 #pragma once
+#include<string>
+#include "../enums/AccountStatus.h"
 
 class Account
 {
 private:
-    /* data */
+    std::string iban;
+    std::string currency;
+    double balance;
+    AccountStatus status;
+
+    bool isValidIban(const std::string& iban);
+    bool isValidCurrency(const std::string& currency);
+    
 public:
-    Account(/* args */){}
+    Account(const std::string& iban, const std::string& currency,double balance);
     ~Account(){}
 };
 
