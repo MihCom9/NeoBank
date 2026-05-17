@@ -1,5 +1,8 @@
 #include <iostream>
 #include "person/ClientManager.h"
+#include "account/CheckingAccount.h"
+#include "account/SavingsAccount.h"
+#include "account/CreditAccount.h"
 
 int main() {
     ClientManager manager;
@@ -50,6 +53,55 @@ int main() {
 
     // List all
     manager.listAll();
+
+    // Create and open accounts
+    CheckingAccount* ivanAcc = new CheckingAccount("BG80BNBG96611020345678", "BGN", 1000.0, 500.0, false);
+    ivan->openAccount(ivanAcc);
+    delete ivanAcc;
+
+    SavingsAccount* ivanSavings = new SavingsAccount("BG80BNBG96611020345679", "BGN", 2000.0, 3.5, 12);
+    ivan->openAccount(ivanSavings);
+    delete ivanSavings;
+
+    CheckingAccount* firmaAcc = new CheckingAccount("BG80BNBG96611020345680", "BGN", 5000.0, 2000.0, true);
+    firma->openAccount(firmaAcc);
+    delete firmaAcc;
+
+    // Print accounts
+    std::cout << *static_cast<CheckingAccount*>(ivan->getAccounts()[0]) << "\n";
+    std::cout << *static_cast<SavingsAccount*>(ivan->getAccounts()[1]) << "\n";
+
+    // Deposit
+    ivan->getAccounts()[0]->deposit(500.0);
+    std::cout << "After deposit: " << ivan->getAccounts()[0]->getBalance() << "\n";
+
+    // Withdraw
+    ivan->getAccounts()[0]->withdraw(200.0);
+    std::cout << "After withdraw: " << ivan->getAccounts()[0]->getBalance() << "\n";
+
+    // Transfer from ivan to firma
+    ivan->getAccounts()[0]->transfer(*firma->getAccounts()[0], 100.0);
+    std::cout << "Ivan balance after transfer: " << ivan->getAccounts()[0]->getBalance() << "\n";
+    std::cout << "Firma balance after transfer: " << firma->getAccounts()[0]->getBalance() << "\n";
+
+    // Try withdrawing more than balance — expect error
+    try {
+        ivan->getAccounts()[0]->withdraw(999999.0);
+    } catch (const std::exception& e) {
+        std::cout << "Caught: " << e.what() << "\n";
+    }
+
+    // Lock account and try to deposit — expect error
+    ivan->getAccounts()[0]->lock();
+    try {
+        ivan->getAccounts()[0]->deposit(100.0);
+    } catch (const std::exception& e) {
+        std::cout << "Caught: " << e.what() << "\n";
+    }
+
+    // Apply interest on savings
+    ivan->getAccounts()[1]->applyInterestOrFee();
+    std::cout << "After interest: " << ivan->getAccounts()[1]->getBalance() << "\n";
 
     return 0;
 }
