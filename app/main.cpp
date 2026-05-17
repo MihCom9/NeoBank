@@ -106,6 +106,27 @@ int main() {
     std::cout << "\n-- Ivan's account transactions --\n";
     for (const Transaction& t : ivan->getAccounts()[0]->getTransactions())
         std::cout << t << "\n";
+    
+    // Filter by type
+    std::cout << "\n-- Deposits only --\n";
+    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByType(TransactionType::DEPOSIT))
+        std::cout << t << "\n";
 
+    // Filter by min amount
+    std::cout << "\n-- Transactions above 300 BGN --\n";
+    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByMinAmount(300.0))
+        std::cout << t << "\n";
+
+    // Filter by date range — from start of today to now
+    std::time_t startOfDay = std::time(nullptr) - 86400;
+    std::time_t now = std::time(nullptr);
+    std::cout << "\n-- Transactions in last 24 hours --\n";
+    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByDateRange(startOfDay, now))
+        std::cout << t << "\n";
+
+    // Monthly statement
+    std::cout << "\n";
+    ivan->getAccounts()[0]->printMonthlyStatement(5, 2026);
+    
     return 0;
 }

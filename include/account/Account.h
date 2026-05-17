@@ -38,4 +38,8 @@ public:
     void lock();
     void close();
 
+    std::vector<Transaction> getTransactionsByType(TransactionType type) const;
+    std::vector<Transaction> getTransactionsByDateRange(std::time_t from, std::time_t to) const;
+    std::vector<Transaction> getTransactionsByMinAmount(double min) const;
+    void printMonthlyStatement(int month, int year) const;
 };
