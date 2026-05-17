@@ -103,5 +103,9 @@ int main() {
     ivan->getAccounts()[1]->applyInterestOrFee();
     std::cout << "After interest: " << ivan->getAccounts()[1]->getBalance() << "\n";
 
+    std::cout << "\n-- Ivan's account transactions --\n";
+    for (const Transaction& t : ivan->getAccounts()[0]->getTransactions())
+        std::cout << t << "\n";
+
     return 0;
 }

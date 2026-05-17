@@ -2,6 +2,8 @@
 #include <string>
 #include <stdexcept>
 #include "enums/AccountStatus.h"
+#include "transaction/Transaction.h"
+#include <vector>
 
 class Account {
 private:
@@ -14,7 +16,7 @@ private:
 
 protected:
     double balance;
-
+    std::vector<Transaction> transactions;
 public:
     Account(const std::string& iban, const std::string& currency, double balance);
     virtual ~Account() = default;
@@ -28,6 +30,7 @@ public:
     std::string getCurrency() const noexcept;
     double getBalance() const noexcept;
     AccountStatus getStatus() const noexcept;
+    const std::vector<Transaction>& getTransactions() const noexcept;
 
     void deposit(double amount);
     void withdraw(double amount);
