@@ -45,5 +45,18 @@ void SavingsAccount::setInterestRate(double rate) {
 }
 
 void SavingsAccount::applyInterestOrFee() {
-    balance += balance * (interestRate / 100.0);
+    double periodicRate = interestRate / 100.0 / compoundingPeriod;
+    double interest = balance * periodicRate;
+    if (interest <= 0) return;
+    balance += interest;
+    transactions.push_back(Transaction(
+        std::to_string(transactions.size() + 1),
+        TransactionType::DEPOSIT,
+        interest, getCurrency(), getIban(), "", TransactionStatus::SUCCESSFUL,
+        "Interest accrual"
+    ));
+    notifications.push_back(Notification(
+        "Interest of " + std::to_string(interest) + " " + getCurrency() + " accrued",
+        NotificationType::GENERAL
+    ));
 }

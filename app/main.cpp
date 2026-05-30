@@ -196,12 +196,56 @@ int main() {
     for (const Notification& n : ivan->getNotifications())
         std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
 
+    // --- Functionality 8: Interest and fee accrual ---
+    std::cout << "\n-- Functionality 8: Interest and fees --\n";
+
+    // SavingsAccount: apply periodic interest (3.5% / 12 periods)
+    Account* savAcc = ivan->getAccounts()[1];
+    double balBefore = savAcc->getBalance();
+    savAcc->applyInterestOrFee();
+    std::cout << "Savings interest: " << balBefore << " -> " << savAcc->getBalance() << " BGN\n";
+
+    // CheckingAccount: apply monthly maintenance fee
+    Account* chkAcc = ivan->getAccounts()[2]; // the limit demo account
+    double chkBefore = chkAcc->getBalance();
+    chkAcc->applyInterestOrFee();
+    std::cout << "Checking fee:     " << chkBefore << " -> " << chkAcc->getBalance() << " BGN\n";
+    std::cout << "CheckingAccount notifications:\n";
+    for (const Notification& n : chkAcc->getNotifications())
+        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
+
+    // CreditAccount: use credit then apply penalty
+    CreditAccount* creditAcc = new CreditAccount("BG80BNBG96611020345683", "BGN", 500.0, 2000.0, 10.0);
+    firma->openAccount(creditAcc);
+    delete creditAcc;
+    CreditAccount* cacc = static_cast<CreditAccount*>(firma->getAccounts()[2]);
+
+    cacc->withdraw(1000.0, "Equipment purchase"); // draws 500 from balance + 500 from credit
+    std::cout << "\nCredit account after 1000 withdraw:\n"
+              << "  Balance:     " << cacc->getBalance() << " BGN\n"
+              << "  Used credit: " << cacc->getUsedCredit() << " BGN\n"
+              << "  Available:   " << cacc->getAvailableCredit() << " BGN\n";
+
+    cacc->applyInterestOrFee(); // 10% penalty on 500 used credit = 50 BGN
+    std::cout << "After penalty (10%): used credit = " << cacc->getUsedCredit() << " BGN\n";
+    std::cout << "CreditAccount notifications:\n";
+    for (const Notification& n : cacc->getNotifications())
+        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
+
+    // Loan overdue penalty
+    std::cout << "\nLoan overdue penalty:\n";
+    firma->applyForLoan(5000.0, 6.0, 12);
+    Loan& overdueLoan = firma->getLoans()[0];
+    std::cout << "  Remaining debt before: " << overdueLoan.getRemainingDebt() << " BGN\n";
+    overdueLoan.applyOverduePenalty(); // not overdue yet — no change
+    std::cout << "  After applyOverduePenalty (not overdue): " << overdueLoan.getRemainingDebt() << " BGN\n";
+
     // --- Functionality 5: Loan system ---
     std::cout << "\n-- Loan system --\n";
 
     // Apply for a loan: 10 000 BGN, 5% annual interest, 24 months
     firma->applyForLoan(10000.0, 5.0, 24);
-    Loan& loan = firma->getLoans()[0];
+    Loan& loan = firma->getLoans().back();
 
     std::cout << "Monthly payment: " << loan.calculateMonthlyPayment() << " BGN\n";
     std::cout << "Remaining debt:  " << loan.getRemainingDebt() << " BGN\n";
@@ -232,7 +276,7 @@ int main() {
 
     // Pay off a second loan fully
     firma->applyForLoan(500.0, 3.0, 6);
-    Loan& smallLoan = firma->getLoans()[1];
+    Loan& smallLoan = firma->getLoans().back();
     double monthly = smallLoan.calculateMonthlyPayment();
     for (int i = 0; i < 6; ++i)
         smallLoan.makePayment(monthly);

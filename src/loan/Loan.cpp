@@ -43,6 +43,13 @@ double Loan::getRemainingDebt() const {
     return remainingDebt;
 }
 
+void Loan::applyOverduePenalty() {
+    checkOverdue();
+    if (status != LoanStatus::OVERDUE) return;
+    double monthlyPenalty = remainingDebt * (interestRate / 100.0 / 12.0);
+    remainingDebt += monthlyPenalty;
+}
+
 void Loan::checkOverdue() {
     if (status != LoanStatus::ACTIVE) return;
     double secondsElapsed = std::difftime(std::time(nullptr), startDate);

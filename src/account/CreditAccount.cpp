@@ -45,7 +45,46 @@ double CreditAccount::getCreditLimit() const noexcept { return creditLimit; }
 double CreditAccount::getUsedCredit() const noexcept { return usedCredit; }
 double CreditAccount::getAvailableCredit() const noexcept { return creditLimit - usedCredit; }
 
+void CreditAccount::withdraw(double amount, const std::string& description) {
+    if (getStatus() != AccountStatus::ACTIVE)
+        throw std::runtime_error("Account is not active");
+    if (amount <= 0)
+        throw std::invalid_argument("Withdraw amount must be positive");
+
+    double totalAvailable = balance + getAvailableCredit();
+    if (amount > totalAvailable)
+        throw std::runtime_error("Insufficient funds and credit");
+
+    if (!limitsettings.checkLimit(amount)) {
+        notifications.push_back(Notification(
+            "Transaction exceeds limit", NotificationType::LIMIT_REACHED));
+        throw std::runtime_error("Transaction exceeds limit");
+    }
+    if (balance - amount < limitsettings.getMinBalance()) {
+        notifications.push_back(Notification(
+            "Balance will fall below minimum alert", NotificationType::LOW_BALANCE));
+    }
+
+    if (amount > balance) {
+        usedCredit += amount - balance;
+        balance = 0;
+    } else {
+        balance -= amount;
+    }
+    limitsettings.addSpending(amount);
+    transactions.push_back(Transaction(
+        std::to_string(transactions.size() + 1),
+        TransactionType::WITHDRAW,
+        amount, getCurrency(), getIban(), "", TransactionStatus::SUCCESSFUL, description
+    ));
+}
+
 void CreditAccount::applyInterestOrFee() {
-    if (usedCredit > 0)
-        usedCredit += usedCredit * (penaltyRate / 100.0);
+    if (usedCredit <= 0) return;
+    double penalty = usedCredit * (penaltyRate / 100.0);
+    usedCredit += penalty;
+    notifications.push_back(Notification(
+        "Penalty interest of " + std::to_string(penalty) + " " + getCurrency() + " applied on used credit",
+        NotificationType::LIMIT_REACHED
+    ));
 }
