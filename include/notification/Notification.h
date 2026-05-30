@@ -1,6 +1,8 @@
 #pragma once
 #include <string>
 #include <ctime>
+#include <random>
+
 
 enum class NotificationType {
     LIMIT_REACHED,
@@ -18,8 +20,12 @@ private:
     NotificationType type;
 
 public:
-    Notification(const std::string& id, const std::string& message, NotificationType type)
-        : id(id), message(message), isRead(false), timestamp(std::time(nullptr)), type(type) {}
+    Notification(const std::string& message, NotificationType type)
+        : message(message), isRead(false), timestamp(std::time(nullptr)), type(type) {
+            static std::mt19937 gen(std::random_device{}());
+            static std::uniform_int_distribution<> dis(1000, 9999);
+            id = "NOTIFICATION-" + std::to_string(dis(gen));
+        }
 
     void markAsRead() { isRead = true; }
 

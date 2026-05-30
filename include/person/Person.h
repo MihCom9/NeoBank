@@ -37,11 +37,13 @@ public:
     std::string getPhone() const noexcept;
     std::vector<Loan>& getLoans() noexcept;
     const std::vector<Loan>& getLoans() const noexcept;
+    const std::vector<Notification>& getNotifications() const noexcept;
     const std::vector<Account*>& getAccounts() const noexcept;
 
     void setEmail(const std::string& email);
     void setName(const std::string& name);
     void setPhone(const std::string& phone);
+    void addNotification(const Notification& notification);
     void openAccount(Account* account);
     void applyForLoan(double principal, double rate, int months);
 

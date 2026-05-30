@@ -5,6 +5,8 @@
 #include "enums/AccountStatus.h"
 #include "enums/Category.h"
 #include "transaction/Transaction.h"
+#include "account/LimitSettings.h"
+#include "notification/Notification.h"
 #include <vector>
 
 class Account {
@@ -19,6 +21,8 @@ private:
 protected:
     double balance;
     std::vector<Transaction> transactions;
+    LimitSettings limitsettings;
+    std::vector<Notification> notifications;
 public:
     Account(const std::string& iban, const std::string& currency, double balance);
     virtual ~Account() = default;
@@ -32,6 +36,8 @@ public:
     std::string getCurrency() const noexcept;
     double getBalance() const noexcept;
     AccountStatus getStatus() const noexcept;
+    const LimitSettings& getLimitSettings() const noexcept;
+    const std::vector<Notification>& getNotifications() const noexcept;
     const std::vector<Transaction>& getTransactions() const noexcept;
 
     void deposit(double amount, const std::string& description = "");
@@ -39,6 +45,7 @@ public:
     void transfer(Account& other, double amount, const std::string& description = "");
     void lock();
     void close();
+    void setLimitSettings(const LimitSettings& limitSettings);
 
     std::vector<Transaction> getTransactionsByType(TransactionType type) const;
     std::vector<Transaction> getTransactionsByDateRange(std::time_t from, std::time_t to) const;
