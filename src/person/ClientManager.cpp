@@ -41,6 +41,8 @@ CorporateClient* ClientManager::registerCorporate(const std::string& name,
     return client;
 }
 
+const std::vector<Person*>& ClientManager::getAll() const noexcept { return clients; }
+
 Person* ClientManager::findById(int id) const {
     for (Person* p : clients)
         if (p->getId() == id) return p;

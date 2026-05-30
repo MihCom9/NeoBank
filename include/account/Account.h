@@ -49,6 +49,7 @@ public:
     virtual void withdraw(double amount, const std::string& description = "");
     virtual void transfer(Account& other, double amount, const std::string& description = "");
     void lock();
+    void unlock();
     void close();
     void setLimitSettings(const LimitSettings& limitSettings);
 
