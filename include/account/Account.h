@@ -1,7 +1,9 @@
 #pragma once
 #include <string>
 #include <stdexcept>
+#include <map>
 #include "enums/AccountStatus.h"
+#include "enums/Category.h"
 #include "transaction/Transaction.h"
 #include <vector>
 
@@ -32,9 +34,9 @@ public:
     AccountStatus getStatus() const noexcept;
     const std::vector<Transaction>& getTransactions() const noexcept;
 
-    void deposit(double amount);
-    void withdraw(double amount);
-    void transfer(Account& other, double amount);
+    void deposit(double amount, const std::string& description = "");
+    void withdraw(double amount, const std::string& description = "");
+    void transfer(Account& other, double amount, const std::string& description = "");
     void lock();
     void close();
 
@@ -42,4 +44,7 @@ public:
     std::vector<Transaction> getTransactionsByDateRange(std::time_t from, std::time_t to) const;
     std::vector<Transaction> getTransactionsByMinAmount(double min) const;
     void printMonthlyStatement(int month, int year) const;
+
+    std::map<Category, double> getCategoryReport(std::time_t from, std::time_t to) const;
+    void printCategoryReport(std::time_t from, std::time_t to) const;
 };

@@ -1,4 +1,6 @@
 #include "account/Account.h"
+#include <iostream>
+#include <iomanip>
 
 bool Account::isValidIban(const std::string& iban) {
     return iban.size() >= 15 && iban.size() <= 34
@@ -35,7 +37,7 @@ double Account::getBalance() const noexcept { return balance; }
 AccountStatus Account::getStatus() const noexcept { return status; }
 const std::vector<Transaction>& Account::getTransactions() const noexcept{return transactions;}
 
-void Account::deposit(double amount) {
+void Account::deposit(double amount, const std::string& description) {
     if (status != AccountStatus::ACTIVE)
         throw std::runtime_error("Account is not active");
     if (amount <= 0)
@@ -44,11 +46,11 @@ void Account::deposit(double amount) {
     transactions.push_back(Transaction(
         std::to_string(transactions.size() + 1),
         TransactionType::DEPOSIT,
-        amount, currency, iban, "", TransactionStatus::SUCCESSFUL
+        amount, currency, iban, "", TransactionStatus::SUCCESSFUL, description
     ));
 }
 
-void Account::withdraw(double amount) {
+void Account::withdraw(double amount, const std::string& description) {
     if (status != AccountStatus::ACTIVE)
         throw std::runtime_error("Account is not active");
     if (amount <= 0)
@@ -59,11 +61,11 @@ void Account::withdraw(double amount) {
     transactions.push_back(Transaction(
         std::to_string(transactions.size() + 1),
         TransactionType::WITHDRAW,
-        amount, currency, iban, "", TransactionStatus::SUCCESSFUL
+        amount, currency, iban, "", TransactionStatus::SUCCESSFUL, description
     ));
 }
 
-void Account::transfer(Account& other, double amount) {
+void Account::transfer(Account& other, double amount, const std::string& description) {
     if (status != AccountStatus::ACTIVE)
         throw std::runtime_error("Account is not active");
     if (amount <= 0)
@@ -75,12 +77,12 @@ void Account::transfer(Account& other, double amount) {
     transactions.push_back(Transaction(
         std::to_string(transactions.size() + 1),
         TransactionType::TRANSFER,
-        amount, currency, iban, other.iban, TransactionStatus::SUCCESSFUL
+        amount, currency, iban, other.iban, TransactionStatus::SUCCESSFUL, description
     ));
     other.transactions.push_back(Transaction(
         std::to_string(other.transactions.size() + 1),
         TransactionType::TRANSFER,
-        amount, currency, iban, other.iban, TransactionStatus::SUCCESSFUL
+        amount, currency, iban, other.iban, TransactionStatus::SUCCESSFUL, description
     ));
 }
 
@@ -118,6 +120,55 @@ std::vector<Transaction> Account::getTransactionsByMinAmount(double min) const {
         if (t.getAmount() >= min)
             result.push_back(t);
     return result;
+}
+
+std::map<Category, double> Account::getCategoryReport(std::time_t from, std::time_t to) const {
+    std::map<Category, double> report;
+    for (const Transaction& t : transactions) {
+        if (t.getTimestamp() < from || t.getTimestamp() > to) continue;
+        if (t.getType() == TransactionType::DEPOSIT) continue;
+        if (t.getType() == TransactionType::TRANSFER && t.getSourceIban() != getIban()) continue;
+        report[t.getCategory()] += t.getAmount();
+    }
+    return report;
+}
+
+static std::string categoryLabel(Category c) {
+    switch (c) {
+        case Category::FOOD:          return "Food";
+        case Category::TRANSPORT:     return "Transport";
+        case Category::UTILITIES:     return "Utilities";
+        case Category::ENTERTAINMENT: return "Entertainment";
+        case Category::HEALTH:        return "Health";
+        case Category::SHOPPING:      return "Shopping";
+        default:                      return "Other";
+    }
+}
+
+void Account::printCategoryReport(std::time_t from, std::time_t to) const {
+    auto report = getCategoryReport(from, to);
+    double total = 0;
+    for (auto& [cat, amount] : report) total += amount;
+
+    std::cout << "=== Category Report ===\n"
+              << "IBAN: " << getIban() << "\n";
+    if (report.empty()) {
+        std::cout << "No expenses in this period.\n";
+        return;
+    }
+    for (auto& [cat, amount] : report) {
+        int pct = (total > 0) ? static_cast<int>(amount / total * 100) : 0;
+        std::string bar(pct / 5, '#');
+        std::cout << std::left << std::setw(14) << categoryLabel(cat)
+                  << std::right << std::setw(8) << std::fixed << std::setprecision(2) << amount
+                  << " " << getCurrency()
+                  << "  [" << bar << std::string(20 - bar.size(), ' ') << "] "
+                  << pct << "%\n";
+    }
+    std::cout << std::string(46, '-') << "\n"
+              << std::left << std::setw(14) << "TOTAL"
+              << std::right << std::setw(8) << std::fixed << std::setprecision(2) << total
+              << " " << getCurrency() << "\n";
 }
 
 void Account::printMonthlyStatement(int month, int year) const {
