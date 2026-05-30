@@ -72,15 +72,15 @@ int main() {
     std::cout << *static_cast<SavingsAccount*>(ivan->getAccounts()[1]) << "\n";
 
     // Deposit
-    ivan->getAccounts()[0]->deposit(500.0);
+    ivan->getAccounts()[0]->deposit(500.0, "Salary deposit");
     std::cout << "After deposit: " << ivan->getAccounts()[0]->getBalance() << "\n";
 
     // Withdraw
-    ivan->getAccounts()[0]->withdraw(200.0);
+    ivan->getAccounts()[0]->withdraw(200.0, "Kaufland grocery shopping");
     std::cout << "After withdraw: " << ivan->getAccounts()[0]->getBalance() << "\n";
 
     // Transfer from ivan to firma
-    ivan->getAccounts()[0]->transfer(*firma->getAccounts()[0], 100.0);
+    ivan->getAccounts()[0]->transfer(*firma->getAccounts()[0], 100.0, "Utility bill payment");
     std::cout << "Ivan balance after transfer: " << ivan->getAccounts()[0]->getBalance() << "\n";
     std::cout << "Firma balance after transfer: " << firma->getAccounts()[0]->getBalance() << "\n";
 
@@ -127,6 +127,30 @@ int main() {
     // Monthly statement
     std::cout << "\n";
     ivan->getAccounts()[0]->printMonthlyStatement(5, 2026);
+
+    // --- Functionality 6: Financial analysis and categorization ---
+    std::cout << "\n-- Functionality 6: Category report --\n";
+
+    // Open a fresh checking account for firma to demo categorization
+    CheckingAccount* demoAcc = new CheckingAccount("BG80BNBG96611020345681", "BGN", 3000.0, 1000.0, false);
+    firma->openAccount(demoAcc);
+    delete demoAcc;
+    Account* acc = firma->getAccounts()[1];
+
+    acc->withdraw(45.0,  "Lidl grocery run");
+    acc->withdraw(30.0,  "Uber ride to airport");
+    acc->withdraw(80.0,  "Electricity bill payment");
+    acc->withdraw(25.0,  "Netflix subscription");
+    acc->withdraw(60.0,  "Pharmacy medicine");
+    acc->withdraw(120.0, "Amazon online purchase");
+    acc->withdraw(35.0,  "Restaurant dinner");
+    acc->withdraw(20.0,  "Bus transport card");
+    acc->withdraw(15.0,  "Concert ticket entertainment");
+    acc->withdraw(50.0,  "Zara clothes shop");
+
+    std::time_t from = std::time(nullptr) - 86400;
+    std::time_t to   = std::time(nullptr) + 1;
+    acc->printCategoryReport(from, to);
 
     // --- Functionality 5: Loan system ---
     std::cout << "\n-- Loan system --\n";
