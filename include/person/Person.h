@@ -4,6 +4,7 @@
 #include <stdexcept>
 #include "../notification/Notification.h"
 #include "../account/Account.h"
+#include "loan/Loan.h"
 #include <ostream> 
 
 class Person {
@@ -18,6 +19,7 @@ private:
 
 protected:
     std::vector<Account*> accounts;
+    std::vector<Loan> loans;
     std::vector<Notification> notifications;
 
 public:
@@ -33,12 +35,15 @@ public:
     std::string getName() const noexcept;
     std::string getEmail() const noexcept;
     std::string getPhone() const noexcept;
+    std::vector<Loan>& getLoans() noexcept;
+    const std::vector<Loan>& getLoans() const noexcept;
     const std::vector<Account*>& getAccounts() const noexcept;
 
     void setEmail(const std::string& email);
     void setName(const std::string& name);
     void setPhone(const std::string& phone);
     void openAccount(Account* account);
+    void applyForLoan(double principal, double rate, int months);
 
     friend std::ostream& operator<<(std::ostream& out, const Person& p);
     friend std::istream& operator>>(std::istream& in, Person& p);
