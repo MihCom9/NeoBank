@@ -55,6 +55,8 @@ std::string Person::getPhone() const noexcept { return phone; }
 const std::vector<Account*>& Person::getAccounts() const noexcept {
     return accounts;
 }
+std::vector<Loan>& Person::getLoans() noexcept { return loans; }
+const std::vector<Loan>& Person::getLoans() const noexcept { return loans; }
 
 void Person::setEmail(const std::string& email) {
     if (!isValidEmail(email))
@@ -78,6 +80,10 @@ void Person::openAccount(Account* account){
     if (!account)
         throw std::invalid_argument("Account cannot be null");
     accounts.push_back(account->clone());
+}
+
+void Person::applyForLoan(double principal, double rate, int months){
+    loans.push_back(Loan(principal,rate, months));
 }
 
 std::ostream& operator<<(std::ostream& out, const Person& p) {

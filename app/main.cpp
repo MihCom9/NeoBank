@@ -127,6 +127,49 @@ int main() {
     // Monthly statement
     std::cout << "\n";
     ivan->getAccounts()[0]->printMonthlyStatement(5, 2026);
-    
+
+    // --- Functionality 5: Loan system ---
+    std::cout << "\n-- Loan system --\n";
+
+    // Apply for a loan: 10 000 BGN, 5% annual interest, 24 months
+    firma->applyForLoan(10000.0, 5.0, 24);
+    Loan& loan = firma->getLoans()[0];
+
+    std::cout << "Monthly payment: " << loan.calculateMonthlyPayment() << " BGN\n";
+    std::cout << "Remaining debt:  " << loan.getRemainingDebt() << " BGN\n";
+
+    // Print first 3 installments from the payment schedule
+    std::vector<double> schedule = loan.getPaymentSchedule();
+    std::cout << "Payment schedule (" << schedule.size() << " installments):\n";
+    for (int i = 0; i < 3; ++i)
+        std::cout << "  Month " << (i + 1) << ": " << schedule[i] << " BGN\n";
+    std::cout << "  ...\n";
+
+    // Make two payments
+    loan.makePayment(loan.calculateMonthlyPayment());
+    loan.makePayment(loan.calculateMonthlyPayment());
+    std::cout << "After 2 payments, remaining debt: " << loan.getRemainingDebt() << " BGN\n";
+
+    // checkOverdue — loan just started so should still be ACTIVE
+    loan.checkOverdue();
+    std::cout << "Status: " << (loan.getStatus() == LoanStatus::ACTIVE ? "ACTIVE" : "OVERDUE") << "\n";
+    std::cout << "isOverdue: " << (loan.isOverdue() ? "yes" : "no") << "\n";
+
+    // Try invalid loan
+    try {
+        firma->applyForLoan(-500.0, 5.0, 12);
+    } catch (const std::exception& e) {
+        std::cout << "Caught: " << e.what() << "\n";
+    }
+
+    // Pay off a second loan fully
+    firma->applyForLoan(500.0, 3.0, 6);
+    Loan& smallLoan = firma->getLoans()[1];
+    double monthly = smallLoan.calculateMonthlyPayment();
+    for (int i = 0; i < 6; ++i)
+        smallLoan.makePayment(monthly);
+    std::cout << "Small loan status: " << (smallLoan.getStatus() == LoanStatus::PAID ? "PAID" : "ACTIVE") << "\n";
+    std::cout << "Remaining debt: " << smallLoan.getRemainingDebt() << " BGN\n";
+
     return 0;
 }
