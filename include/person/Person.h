@@ -40,6 +40,8 @@ public:
     const std::vector<Notification>& getNotifications() const noexcept;
     const std::vector<Account*>& getAccounts() const noexcept;
 
+    Person& operator=(const Person& other);
+
     void setEmail(const std::string& email);
     void setName(const std::string& name);
     void setPhone(const std::string& phone);

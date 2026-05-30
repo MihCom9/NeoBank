@@ -20,7 +20,7 @@ bool Person::isValidPhone(const std::string& phone) {
 
 Person::Person(const int id, const std::string& name, const std::string& email, const std::string& phone)
     : id(id), name(name), email(email), phone(phone), accounts() {
-    if (id < 0 || name.empty())
+    if (id <= 0 || name.empty())
         throw std::invalid_argument("Invalid Person constructor argument");
     if (!isValidEmail(email))
         throw std::invalid_argument("Invalid email");
@@ -29,10 +29,27 @@ Person::Person(const int id, const std::string& name, const std::string& email, 
 }
 
 Person::Person(const Person& other)
-    : id(other.id), name(other.name), 
-    email(other.email), phone(other.phone){
+    : id(other.id), name(other.name),
+      email(other.email), phone(other.phone),
+      loans(other.loans), notifications(other.notifications) {
     for (Account* a : other.accounts)
-    accounts.push_back(a->clone());
+        accounts.push_back(a->clone());
+}
+
+Person& Person::operator=(const Person& other) {
+    if (this != &other) {
+        for (Account* a : accounts) delete a;
+        accounts.clear();
+        id = other.id;
+        name = other.name;
+        email = other.email;
+        phone = other.phone;
+        loans = other.loans;
+        notifications = other.notifications;
+        for (Account* a : other.accounts)
+            accounts.push_back(a->clone());
+    }
+    return *this;
 }
 
 Person::~Person() {

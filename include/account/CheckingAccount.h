@@ -11,6 +11,7 @@ public:
     CheckingAccount(const std::string& iban, const std::string& currency,
                     double balance, double dailyLimit, bool overdraftAllowed);
     CheckingAccount(const CheckingAccount& other);
+    CheckingAccount& operator=(const CheckingAccount& other);
 
     Account* clone() const override;
     

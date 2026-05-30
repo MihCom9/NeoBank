@@ -25,6 +25,23 @@ CorporateClient::CorporateClient(int id,
         throw std::invalid_argument("Invalid Arguments for Corporate Client");
 }
 
+CorporateClient::CorporateClient(const CorporateClient& other)
+    : Person(other), eik(other.eik), companyName(other.companyName),
+      vatNumber(other.vatNumber), representative(other.representative),
+      active(other.active) {}
+
+CorporateClient& CorporateClient::operator=(const CorporateClient& other) {
+    if (this != &other) {
+        Person::operator=(other);
+        eik = other.eik;
+        companyName = other.companyName;
+        vatNumber = other.vatNumber;
+        representative = other.representative;
+        active = other.active;
+    }
+    return *this;
+}
+
 std::string CorporateClient::getEik() const noexcept { return eik; }
 std::string CorporateClient::getCompanyName() const noexcept { return companyName; }
 std::string CorporateClient::getVatNumber() const noexcept { return vatNumber; }

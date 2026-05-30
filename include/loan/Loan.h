@@ -24,7 +24,7 @@ public:
         termMonths(termMonths),  remainingDebt(principal), status(LoanStatus::ACTIVE), 
         payments(), startDate(std::time(nullptr))
     {
-        if(principal < 0 || interestRate < 0){
+        if(principal <= 0 || interestRate < 0 || termMonths == 0){
             throw std::invalid_argument("Arguments are invalid for loan");
         }
         static std::mt19937 gen(std::random_device{}());

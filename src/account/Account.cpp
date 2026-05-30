@@ -31,7 +31,19 @@ Account::Account(const Account& other)
       balance(other.balance), status(other.status),
       transactions(other.transactions),
       limitsettings(other.limitsettings),
-      notifications(other.notifications) {
+      notifications(other.notifications) {}
+
+Account& Account::operator=(const Account& other) {
+    if (this != &other) {
+        iban = other.iban;
+        currency = other.currency;
+        balance = other.balance;
+        status = other.status;
+        transactions = other.transactions;
+        limitsettings = other.limitsettings;
+        notifications = other.notifications;
+    }
+    return *this;
 }
 
 std::string Account::getIban() const noexcept { return iban; }
