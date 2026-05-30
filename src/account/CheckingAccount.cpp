@@ -43,6 +43,23 @@ void CheckingAccount::setDailyLimit(double limit) {
 }
 
 void CheckingAccount::applyInterestOrFee() {
-    if (getBalance() == 0)
-        balance -= 2.0;
+    const double MONTHLY_FEE = 2.0;
+    if (balance < MONTHLY_FEE && !overdraftAllowed) {
+        notifications.push_back(Notification(
+            "Could not apply monthly fee: insufficient funds",
+            NotificationType::GENERAL
+        ));
+        return;
+    }
+    balance -= MONTHLY_FEE;
+    transactions.push_back(Transaction(
+        std::to_string(transactions.size() + 1),
+        TransactionType::WITHDRAW,
+        MONTHLY_FEE, getCurrency(), getIban(), "", TransactionStatus::SUCCESSFUL,
+        "Monthly maintenance fee"
+    ));
+    notifications.push_back(Notification(
+        "Monthly maintenance fee of " + std::to_string(MONTHLY_FEE) + " " + getCurrency() + " applied",
+        NotificationType::GENERAL
+    ));
 }
