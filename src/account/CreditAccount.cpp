@@ -89,6 +89,47 @@ void CreditAccount::withdraw(double amount, const std::string& description) {
     ));
 }
 
+void CreditAccount::transfer(Account& other, double amount, const std::string& description) {
+    if (getStatus() != AccountStatus::ACTIVE)
+        throw std::runtime_error("Account is not active");
+    if (other.status != AccountStatus::ACTIVE)
+        throw std::runtime_error("Target account is not active");
+    if (amount <= 0)
+        throw std::invalid_argument("Transfer amount must be positive");
+
+    double totalAvailable = balance + getAvailableCredit();
+    if (amount > totalAvailable)
+        throw std::runtime_error("Insufficient funds and credit");
+
+    if (!limitsettings.checkLimit(amount)) {
+        notifications.push_back(Notification("Transaction exceeds limit", NotificationType::LIMIT_REACHED));
+        throw std::runtime_error("Transaction exceeds limit");
+    }
+    if (balance - amount < limitsettings.getMinBalance()) {
+        notifications.push_back(Notification("Balance will fall below minimum alert", NotificationType::LOW_BALANCE));
+    }
+
+    if (amount > balance) {
+        usedCredit += amount - balance;
+        balance = 0;
+    } else {
+        balance -= amount;
+    }
+    limitsettings.addSpending(amount);
+    other.balance += amount;
+
+    transactions.push_back(Transaction(
+        std::to_string(transactions.size() + 1),
+        TransactionType::TRANSFER,
+        amount, getCurrency(), getIban(), other.getIban(), TransactionStatus::SUCCESSFUL, description
+    ));
+    other.transactions.push_back(Transaction(
+        std::to_string(other.transactions.size() + 1),
+        TransactionType::TRANSFER,
+        amount, getCurrency(), getIban(), other.getIban(), TransactionStatus::SUCCESSFUL, description
+    ));
+}
+
 void CreditAccount::applyInterestOrFee() {
     if (usedCredit <= 0) return;
     double penalty = usedCredit * (penaltyRate / 100.0);

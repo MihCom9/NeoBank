@@ -41,7 +41,7 @@ public:
     void applyOverduePenalty();
 
     double getRemainingDebt() const;
-    bool isOverdue() const;
+    bool isOverdue();
     LoanStatus getStatus() const;
     std::vector<double> getPaymentSchedule() const;
 };

@@ -95,6 +95,8 @@ void Account::withdraw(double amount, const std::string& description) {
 void Account::transfer(Account& other, double amount, const std::string& description) {
     if (status != AccountStatus::ACTIVE)
         throw std::runtime_error("Account is not active");
+    if (other.status != AccountStatus::ACTIVE)
+        throw std::runtime_error("Target account is not active");
     if (amount <= 0)
         throw std::invalid_argument("Transfer amount must be positive");
     if (amount > balance)
