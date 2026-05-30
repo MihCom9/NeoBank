@@ -58,7 +58,8 @@ void Loan::checkOverdue() {
         status = LoanStatus::OVERDUE;
 }
 
-bool Loan::isOverdue() const {
+bool Loan::isOverdue() {
+    checkOverdue();
     return status == LoanStatus::OVERDUE;
 }
 

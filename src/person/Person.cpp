@@ -118,6 +118,12 @@ std::ostream& operator<<(std::ostream& out, const Person& p) {
 
 std::istream& operator>>(std::istream& in, Person& p) {
     std::string name, email, phone;
+    std::cout << "New name: ";
+    std::getline(in >> std::ws, name);
+    std::cout << "New email: ";
+    std::getline(in >> std::ws, email);
+    std::cout << "New phone: ";
+    std::getline(in >> std::ws, phone);
     p.setName(name);
     p.setEmail(email);
     p.setPhone(phone);

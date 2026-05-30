@@ -1,6 +1,6 @@
 #pragma once
 
-enum LoanStatus{
+enum class LoanStatus {
     ACTIVE,
     PAID,
     OVERDUE
