@@ -16,7 +16,8 @@ bool Account::isValidCurrency(const std::string& currency) {
 }
 
 Account::Account(const std::string& iban, const std::string& currency, double balance)
-    : iban(iban), currency(currency), balance(balance), status(AccountStatus::ACTIVE), transactions() {
+    : iban(iban), currency(currency), balance(balance), status(AccountStatus::ACTIVE),
+      transactions(), limitsettings(), notifications() {
     if (!isValidIban(iban))
         throw std::invalid_argument("Invalid IBAN");
     if (!isValidCurrency(currency))
@@ -28,13 +29,17 @@ Account::Account(const std::string& iban, const std::string& currency, double ba
 Account::Account(const Account& other)
     : iban(other.iban), currency(other.currency),
       balance(other.balance), status(other.status),
-      transactions(other.transactions) {
+      transactions(other.transactions),
+      limitsettings(other.limitsettings),
+      notifications(other.notifications) {
 }
 
 std::string Account::getIban() const noexcept { return iban; }
 std::string Account::getCurrency() const noexcept { return currency; }
 double Account::getBalance() const noexcept { return balance; }
 AccountStatus Account::getStatus() const noexcept { return status; }
+const LimitSettings& Account::getLimitSettings() const noexcept{return limitsettings;}
+const std::vector<Notification>& Account::getNotifications() const noexcept{return notifications;}
 const std::vector<Transaction>& Account::getTransactions() const noexcept{return transactions;}
 
 void Account::deposit(double amount, const std::string& description) {
@@ -57,7 +62,17 @@ void Account::withdraw(double amount, const std::string& description) {
         throw std::invalid_argument("Withdraw amount must be positive");
     if (amount > balance)
         throw std::runtime_error("Insufficient funds");
+    if(!limitsettings.checkLimit(amount)){
+        notifications.push_back(Notification(
+            "Transaction exceeds limit", NotificationType::LIMIT_REACHED));
+        throw std::runtime_error("Transaction exceeds limit");
+    }
+    if(balance - amount < limitsettings.getMinBalance()){
+        notifications.push_back(Notification(
+            "Balance will fall below minimum alert", NotificationType::LOW_BALANCE));
+    }
     balance -= amount;
+    limitsettings.addSpending(amount);
     transactions.push_back(Transaction(
         std::to_string(transactions.size() + 1),
         TransactionType::WITHDRAW,
@@ -72,7 +87,17 @@ void Account::transfer(Account& other, double amount, const std::string& descrip
         throw std::invalid_argument("Transfer amount must be positive");
     if (amount > balance)
         throw std::runtime_error("Insufficient funds");
+    if(!limitsettings.checkLimit(amount)){
+        notifications.push_back(Notification(
+            "Transaction exceeds limit", NotificationType::LIMIT_REACHED));
+        throw std::runtime_error("Transaction exceeds limit");
+    }
+    if(balance - amount < limitsettings.getMinBalance()){
+        notifications.push_back(Notification(
+            "Balance will fall below minimum alert", NotificationType::LOW_BALANCE));
+    }
     balance -= amount;
+    limitsettings.addSpending(amount);
     other.balance += amount;
     transactions.push_back(Transaction(
         std::to_string(transactions.size() + 1),
@@ -96,6 +121,10 @@ void Account::close() {
     if (status == AccountStatus::CLOSED)
         throw std::runtime_error("Account is already closed");
     status = AccountStatus::CLOSED;
+}
+
+void Account::setLimitSettings(const LimitSettings& limitSettings){
+    this->limitsettings = limitSettings;
 }
 
 std::vector<Transaction> Account::getTransactionsByType(TransactionType type) const {

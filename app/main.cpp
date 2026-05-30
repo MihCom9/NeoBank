@@ -152,6 +152,50 @@ int main() {
     std::time_t to   = std::time(nullptr) + 1;
     acc->printCategoryReport(from, to);
 
+    // --- Functionality 7: Limits and notifications ---
+    std::cout << "\n-- Functionality 7: Limits and notifications --\n";
+
+    CheckingAccount* limitAcc = new CheckingAccount("BG80BNBG96611020345682", "BGN", 2000.0, 500.0, false);
+    ivan->openAccount(limitAcc);
+    delete limitAcc;
+    Account* lacc = ivan->getAccounts()[2];
+
+    // Set limits: daily 300, single tx 200, min balance alert 1800
+    lacc->setLimitSettings(LimitSettings(300.0, 200.0, 1800.0));
+
+    // Withdraw 100 — under limits, balance stays above 1800 — no notification
+    lacc->withdraw(100.0, "Kaufland groceries");
+    std::cout << "Balance after 100 withdraw: " << lacc->getBalance() << " BGN\n";
+
+    // Withdraw 150 — balance drops to 1750 < 1800 — LOW_BALANCE notification
+    lacc->withdraw(150.0, "Zara shopping");
+    std::cout << "Balance after 150 withdraw: " << lacc->getBalance() << " BGN\n";
+
+    // Exceeds single tx limit (> 200) — should throw and add LIMIT_REACHED notification
+    try {
+        lacc->withdraw(250.0, "Big purchase");
+    } catch (const std::exception& e) {
+        std::cout << "Caught: " << e.what() << "\n";
+    }
+
+    // Exceeds daily limit (100 + 150 = 250 spent; 300 - 250 = 50 left; 80 > 50) — LIMIT_REACHED
+    try {
+        lacc->withdraw(80.0, "Another shop");
+    } catch (const std::exception& e) {
+        std::cout << "Caught: " << e.what() << "\n";
+    }
+
+    // Print account notifications
+    std::cout << "\nAccount notifications (" << lacc->getNotifications().size() << "):\n";
+    for (const Notification& n : lacc->getNotifications())
+        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
+
+    // Person-level notifications
+    ivan->addNotification(Notification("Welcome to NeoBank!", NotificationType::GENERAL));
+    std::cout << "\nPerson notifications (" << ivan->getNotifications().size() << "):\n";
+    for (const Notification& n : ivan->getNotifications())
+        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
+
     // --- Functionality 5: Loan system ---
     std::cout << "\n-- Loan system --\n";
 

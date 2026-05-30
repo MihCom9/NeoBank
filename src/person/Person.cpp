@@ -52,6 +52,7 @@ int Person::getId() const noexcept { return id; }
 std::string Person::getName() const noexcept { return name; }
 std::string Person::getEmail() const noexcept { return email; }
 std::string Person::getPhone() const noexcept { return phone; }
+const std::vector<Notification>& Person::getNotifications() const noexcept{return notifications;}
 const std::vector<Account*>& Person::getAccounts() const noexcept {
     return accounts;
 }
@@ -74,6 +75,10 @@ void Person::setPhone(const std::string& phone) {
     if (!isValidPhone(phone))
         throw std::invalid_argument("Invalid phone number");
     this->phone = phone;
+}
+
+void Person::addNotification(const Notification& notification){
+    notifications.push_back(notification);
 }
 
 void Person::openAccount(Account* account){
