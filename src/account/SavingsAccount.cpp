@@ -13,6 +13,15 @@ SavingsAccount::SavingsAccount(const std::string& iban, const std::string& curre
 SavingsAccount::SavingsAccount(const SavingsAccount& other)
     : Account(other), interestRate(other.interestRate), compoundingPeriod(other.compoundingPeriod) {}
 
+SavingsAccount& SavingsAccount::operator=(const SavingsAccount& other) {
+    if (this != &other) {
+        Account::operator=(other);
+        interestRate = other.interestRate;
+        compoundingPeriod = other.compoundingPeriod;
+    }
+    return *this;
+}
+
 Account* SavingsAccount::clone() const {
     return new SavingsAccount(*this);
 }

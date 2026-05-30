@@ -1,14 +1,21 @@
 #include "account/LimitSettings.h"
-#include<ctime>
+#include <ctime>
+#include <stdexcept>
 LimitSettings::LimitSettings()
     : dailyLimit(1e9), singleTxLimit(1e9), minBalance(0), dailySpent(0),
       lastResetDate(std::time(nullptr)) {}
 
 LimitSettings::LimitSettings(const double dailyLimit, const double singleTxLimit,
-         const double minBalance): dailyLimit(dailyLimit), 
+         const double minBalance): dailyLimit(dailyLimit),
          singleTxLimit(singleTxLimit), minBalance(minBalance), dailySpent(0),
-         lastResetDate(std::time(nullptr)) 
-         {}
+         lastResetDate(std::time(nullptr)) {
+    if (dailyLimit <= 0)
+        throw std::invalid_argument("Daily limit must be positive");
+    if (singleTxLimit <= 0)
+        throw std::invalid_argument("Single transaction limit must be positive");
+    if (minBalance < 0)
+        throw std::invalid_argument("Minimum balance alert cannot be negative");
+}
 
 double LimitSettings::getDailyLimit() const{return dailyLimit;}
 double LimitSettings::getSingleTxLimit() const{return singleTxLimit;}

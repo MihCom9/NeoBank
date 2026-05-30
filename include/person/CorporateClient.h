@@ -22,6 +22,9 @@ public:
                     const std::string& companyName,
                     const std::string& vatNumber,
                     const std::string& representative);
+    ~CorporateClient() = default;
+    CorporateClient(const CorporateClient& other);
+    CorporateClient& operator=(const CorporateClient& other);
 
     std::string getEik() const noexcept;
     std::string getCompanyName() const noexcept;

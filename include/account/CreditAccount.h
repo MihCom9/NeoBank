@@ -13,6 +13,7 @@ public:
                   double balance, double creditLimit, double penaltyRate);
     
     CreditAccount(const CreditAccount& other);
+    CreditAccount& operator=(const CreditAccount& other);
 
     Account* clone() const override;
 

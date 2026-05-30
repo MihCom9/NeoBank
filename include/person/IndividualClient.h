@@ -30,7 +30,9 @@ public:
                 const std::string& dateOfBirth, 
                 const std::string& address);
 
-    ~IndividualClient(){}
+    ~IndividualClient() = default;
+    IndividualClient(const IndividualClient& other);
+    IndividualClient& operator=(const IndividualClient& other);
     
     std::string getEgn() const noexcept;
     std::string getDateOfBirth() const noexcept;

@@ -19,6 +19,9 @@ private:
     bool isValidCurrency(const std::string& currency);
 
 protected:
+    Account& operator=(const Account& other);
+
+protected:
     double balance;
     std::vector<Transaction> transactions;
     LimitSettings limitsettings;

@@ -11,6 +11,15 @@ CheckingAccount::CheckingAccount(const std::string& iban, const std::string& cur
 CheckingAccount::CheckingAccount(const CheckingAccount& other)
     : Account(other), dailyLimit(other.dailyLimit), overdraftAllowed(other.overdraftAllowed) {}
 
+CheckingAccount& CheckingAccount::operator=(const CheckingAccount& other) {
+    if (this != &other) {
+        Account::operator=(other);
+        dailyLimit = other.dailyLimit;
+        overdraftAllowed = other.overdraftAllowed;
+    }
+    return *this;
+}
+
 Account* CheckingAccount::clone() const {
     return new CheckingAccount(*this);
 }

@@ -12,6 +12,7 @@ public:
                    double balance, double interestRate, int compoundingPeriod);
 
     SavingsAccount(const SavingsAccount& other);
+    SavingsAccount& operator=(const SavingsAccount& other);
 
     Account* clone() const override;
 

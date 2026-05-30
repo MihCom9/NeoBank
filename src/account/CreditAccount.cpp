@@ -15,6 +15,16 @@ CreditAccount::CreditAccount(const CreditAccount& other)
     : Account(other), creditLimit(other.creditLimit),
       penaltyRate(other.penaltyRate), usedCredit(other.usedCredit) {}
 
+CreditAccount& CreditAccount::operator=(const CreditAccount& other) {
+    if (this != &other) {
+        Account::operator=(other);
+        creditLimit = other.creditLimit;
+        penaltyRate = other.penaltyRate;
+        usedCredit = other.usedCredit;
+    }
+    return *this;
+}
+
 Account* CreditAccount::clone() const {
     return new CreditAccount(*this);
 }

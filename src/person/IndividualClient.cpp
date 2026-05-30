@@ -42,6 +42,21 @@ IndividualClient::IndividualClient(const int id,
     }
 }
 
+IndividualClient::IndividualClient(const IndividualClient& other)
+    : Person(other), egn(other.egn), dateOfBirth(other.dateOfBirth),
+      address(other.address), active(other.active) {}
+
+IndividualClient& IndividualClient::operator=(const IndividualClient& other) {
+    if (this != &other) {
+        Person::operator=(other);
+        egn = other.egn;
+        dateOfBirth = other.dateOfBirth;
+        address = other.address;
+        active = other.active;
+    }
+    return *this;
+}
+
 std::string IndividualClient::getEgn() const noexcept{return egn;}
 std::string IndividualClient::getDateOfBirth() const noexcept{return dateOfBirth;}
 std::string IndividualClient::getAddress() const noexcept{return address;}

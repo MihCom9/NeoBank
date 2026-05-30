@@ -12,6 +12,8 @@ private:
 public:
     ClientManager();
     ~ClientManager();
+    ClientManager(const ClientManager&) = delete;
+    ClientManager& operator=(const ClientManager&) = delete;
 
     IndividualClient* registerIndividual(const std::string& name,
                                          const std::string& email,
