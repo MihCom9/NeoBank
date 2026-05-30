@@ -21,6 +21,7 @@ public:
     double getUsedCredit() const noexcept;
     double getAvailableCredit() const noexcept;
 
+    void withdraw(double amount, const std::string& description = "") override;
     void applyInterestOrFee() override;
     friend std::ostream& operator<<(std::ostream& out, const CreditAccount& acc);
     friend std::istream& operator>>(std::istream& in, CreditAccount& acc);

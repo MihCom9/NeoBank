@@ -40,9 +40,9 @@ public:
     const std::vector<Notification>& getNotifications() const noexcept;
     const std::vector<Transaction>& getTransactions() const noexcept;
 
-    void deposit(double amount, const std::string& description = "");
-    void withdraw(double amount, const std::string& description = "");
-    void transfer(Account& other, double amount, const std::string& description = "");
+    virtual void deposit(double amount, const std::string& description = "");
+    virtual void withdraw(double amount, const std::string& description = "");
+    virtual void transfer(Account& other, double amount, const std::string& description = "");
     void lock();
     void close();
     void setLimitSettings(const LimitSettings& limitSettings);

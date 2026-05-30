@@ -38,6 +38,7 @@ public:
     double calculateMonthlyPayment() const;
     void makePayment(double amount);
     void checkOverdue();
+    void applyOverduePenalty();
 
     double getRemainingDebt() const;
     bool isOverdue() const;
