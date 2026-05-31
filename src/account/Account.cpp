@@ -128,7 +128,17 @@ void Account::transfer(Account& other, double amount, const std::string& descrip
 void Account::lock() {
     if (status == AccountStatus::CLOSED)
         throw std::runtime_error("Cannot lock a closed account");
+    if (status == AccountStatus::LOCKED)
+        throw std::runtime_error("Account is already locked");
     status = AccountStatus::LOCKED;
+}
+
+void Account::unlock() {
+    if (status == AccountStatus::CLOSED)
+        throw std::runtime_error("Cannot unlock a closed account");
+    if (status == AccountStatus::ACTIVE)
+        throw std::runtime_error("Account is already active");
+    status = AccountStatus::ACTIVE;
 }
 
 void Account::close() {

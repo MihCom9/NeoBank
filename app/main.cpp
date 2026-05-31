@@ -1,287 +1,524 @@
 #include <iostream>
+#include <iomanip>
+#include <limits>
+#include <string>
+#include <vector>
+#include <ctime>
 #include "person/ClientManager.h"
 #include "account/CheckingAccount.h"
 #include "account/SavingsAccount.h"
 #include "account/CreditAccount.h"
 
-int main() {
-    ClientManager manager;
+// ─── Terminal helpers ──────────────────────────────────────────────────────
 
-    // Register individual
-    IndividualClient* ivan = manager.registerIndividual(
+static void cls() { std::cout << "\033[2J\033[H"; }
+
+static void pause() {
+    std::cout << "\n  Press Enter to continue...";
+    std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+}
+
+static void hdr(const std::string& title) {
+    std::cout << "\n\033[1;36m" << std::string(54, '=') << "\n"
+              << "  " << title << "\n"
+              << std::string(54, '=') << "\033[0m\n";
+}
+
+static void sep() { std::cout << "  " << std::string(50, '-') << "\n"; }
+
+static std::string askLine(const std::string& prompt) {
+    std::cout << "  " << prompt;
+    std::string s;
+    std::getline(std::cin >> std::ws, s);
+    return s;
+}
+
+static int askInt(const std::string& prompt) {
+    int v = 0;
+    while (true) {
+        std::cout << "  " << prompt;
+        if (std::cin >> v) {
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return v;
+        }
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "  \033[33m! Enter a whole number.\033[0m\n";
+    }
+}
+
+static double askDouble(const std::string& prompt) {
+    double v = 0.0;
+    while (true) {
+        std::cout << "  " << prompt;
+        if (std::cin >> v) {
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            return v;
+        }
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        std::cout << "  \033[33m! Enter a number.\033[0m\n";
+    }
+}
+
+// ─── Formatting helpers ────────────────────────────────────────────────────
+
+static std::string accTypeName(const Account* a) {
+    if (dynamic_cast<const CheckingAccount*>(a)) return "Checking";
+    if (dynamic_cast<const SavingsAccount*>(a))  return "Savings ";
+    if (dynamic_cast<const CreditAccount*>(a))   return "Credit  ";
+    return "Unknown ";
+}
+
+static std::string statusColor(AccountStatus s) {
+    switch (s) {
+        case AccountStatus::ACTIVE: return "\033[32mACTIVE\033[0m";
+        case AccountStatus::LOCKED: return "\033[33mLOCKED\033[0m";
+        case AccountStatus::CLOSED: return "\033[31mCLOSED\033[0m";
+        default: return "?";
+    }
+}
+
+static std::string loanStatusColor(LoanStatus s) {
+    switch (s) {
+        case LoanStatus::ACTIVE:  return "\033[32mACTIVE\033[0m";
+        case LoanStatus::PAID:    return "\033[34mPAID\033[0m";
+        case LoanStatus::OVERDUE: return "\033[31mOVERDUE\033[0m";
+        default: return "?";
+    }
+}
+
+static std::string money(double v, const std::string& cur = "BGN") {
+    std::ostringstream ss;
+    ss << std::fixed << std::setprecision(2) << v << " " << cur;
+    return ss.str();
+}
+
+// Collect all accounts across every client in the manager
+static std::vector<Account*> collectAllAccounts(ClientManager& mgr) {
+    std::vector<Account*> result;
+    for (Person* p : mgr.getAll())
+        for (Account* a : p->getAccounts())
+            result.push_back(a);
+    return result;
+}
+
+// ─── Account menu ──────────────────────────────────────────────────────────
+
+static void accountMenu(Account* acc, ClientManager& mgr) {
+    while (true) {
+        cls();
+        hdr("Account  " + acc->getIban());
+        std::cout << "  Type    : " << accTypeName(acc) << "\n"
+                  << "  Balance : \033[1m" << money(acc->getBalance(), acc->getCurrency()) << "\033[0m\n"
+                  << "  Status  : " << statusColor(acc->getStatus()) << "\n";
+
+        if (auto* ca = dynamic_cast<CreditAccount*>(acc)) {
+            std::cout << "  Credit  : used " << money(ca->getUsedCredit())
+                      << "  /  available " << money(ca->getAvailableCredit()) << "\n";
+        }
+        sep();
+        std::cout << "  [1] Deposit          [2] Withdraw\n"
+                  << "  [3] Transfer         [4] Transaction history\n"
+                  << "  [5] Monthly statement[6] Category report (30d)\n"
+                  << "  [7] Set limits       [8] Apply interest / fee\n"
+                  << "  [9] Lock             [10] Unlock\n"
+                  << "  [11] Close\n";
+        sep();
+
+        int ch = askInt("Choice [0=Back]: ");
+        if (ch == 0) return;
+
+        try {
+            switch (ch) {
+
+            case 1: {
+                double amt = askDouble("Amount: ");
+                std::string d = askLine("Description (optional): ");
+                acc->deposit(amt, d);
+                std::cout << "  \033[32m✓ Deposited. Balance: " << money(acc->getBalance(), acc->getCurrency()) << "\033[0m\n";
+                break;
+            }
+
+            case 2: {
+                double amt = askDouble("Amount: ");
+                std::string d = askLine("Description (optional): ");
+                acc->withdraw(amt, d);
+                std::cout << "  \033[32m✓ Withdrawn. Balance: " << money(acc->getBalance(), acc->getCurrency()) << "\033[0m\n";
+                break;
+            }
+
+            case 3: {
+                auto all = collectAllAccounts(mgr);
+                std::cout << "\n  Available target accounts:\n";
+                bool anyOther = false;
+                for (size_t i = 0; i < all.size(); ++i) {
+                    if (all[i] == acc) continue;
+                    std::cout << "  [" << i << "] "
+                              << all[i]->getIban() << " [" << accTypeName(all[i]) << "]  "
+                              << money(all[i]->getBalance(), all[i]->getCurrency())
+                              << "  " << statusColor(all[i]->getStatus()) << "\n";
+                    anyOther = true;
+                }
+                if (!anyOther) { std::cout << "  No other accounts exist.\n"; break; }
+                int idx = askInt("Target index: ");
+                if (idx < 0 || idx >= (int)all.size() || all[idx] == acc) {
+                    std::cout << "  \033[33m! Invalid selection.\033[0m\n"; break;
+                }
+                double amt = askDouble("Amount: ");
+                std::string d = askLine("Description (optional): ");
+                acc->transfer(*all[idx], amt, d);
+                std::cout << "  \033[32m✓ Transferred. Your balance: "
+                          << money(acc->getBalance(), acc->getCurrency()) << "\033[0m\n";
+                break;
+            }
+
+            case 4: {
+                const auto& txs = acc->getTransactions();
+                if (txs.empty()) { std::cout << "  No transactions yet.\n"; break; }
+                std::cout << "\n  [1] All  [2] By type  [3] Min amount  [0] Cancel\n";
+                int f = askInt("Filter: ");
+                if (f == 1) {
+                    for (const auto& tx : txs) std::cout << tx << "\n";
+                } else if (f == 2) {
+                    std::cout << "  Type: [1] DEPOSIT  [2] WITHDRAW  [3] TRANSFER\n";
+                    int tp = askInt("Type: ");
+                    TransactionType tt = (tp == 1) ? TransactionType::DEPOSIT
+                                       : (tp == 2) ? TransactionType::WITHDRAW
+                                                   : TransactionType::TRANSFER;
+                    for (const auto& tx : acc->getTransactionsByType(tt)) std::cout << tx << "\n";
+                } else if (f == 3) {
+                    double min = askDouble("Minimum amount: ");
+                    for (const auto& tx : acc->getTransactionsByMinAmount(min)) std::cout << tx << "\n";
+                }
+                break;
+            }
+
+            case 5: {
+                int m = askInt("Month (1-12): ");
+                int y = askInt("Year (e.g. 2026): ");
+                acc->printMonthlyStatement(m, y);
+                break;
+            }
+
+            case 6: {
+                std::time_t now  = std::time(nullptr);
+                std::time_t from = now - 30 * 24 * 3600;
+                std::cout << "  (Last 30 days)\n";
+                acc->printCategoryReport(from, now);
+                break;
+            }
+
+            case 7: {
+                double dl = askDouble("Daily spending limit: ");
+                double sl = askDouble("Single transaction limit: ");
+                double mb = askDouble("Min balance alert: ");
+                acc->setLimitSettings(LimitSettings(dl, sl, mb));
+                std::cout << "  \033[32m✓ Limits saved.\033[0m\n";
+                break;
+            }
+
+            case 8:
+                acc->applyInterestOrFee();
+                std::cout << "  \033[32m✓ Applied. Balance: "
+                          << money(acc->getBalance(), acc->getCurrency()) << "\033[0m\n";
+                break;
+
+            case 9:
+                acc->lock();
+                std::cout << "  \033[33m⚠ Account locked.\033[0m\n";
+                break;
+
+            case 10:
+                acc->unlock();
+                std::cout << "  \033[32m✓ Account unlocked.\033[0m\n";
+                break;
+
+            case 11:
+                acc->close();
+                std::cout << "  \033[31m⚠ Account closed.\033[0m\n";
+                break;
+
+            default:
+                std::cout << "  \033[33m! Unknown option.\033[0m\n";
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  \033[31m✗ " << e.what() << "\033[0m\n";
+        }
+        pause();
+    }
+}
+
+// ─── Loan menu ─────────────────────────────────────────────────────────────
+
+static void loanMenu(Person* p) {
+    while (true) {
+        cls();
+        hdr("Loans of " + p->getName());
+        auto& loans = p->getLoans();
+        if (loans.empty()) {
+            std::cout << "  No loans.\n";
+            pause();
+            return;
+        }
+        for (size_t i = 0; i < loans.size(); ++i) {
+            std::cout << "  [" << i << "]  Remaining: "
+                      << std::fixed << std::setprecision(2) << loans[i].getRemainingDebt()
+                      << " BGN  |  " << loanStatusColor(loans[i].getStatus()) << "\n";
+        }
+        sep();
+        int idx = askInt("Select loan [−1=Back]: ");
+        if (idx < 0) return;
+        if (idx >= (int)loans.size()) { std::cout << "  \033[33m! Invalid.\033[0m\n"; pause(); continue; }
+
+        Loan& loan = loans[idx];
+        cls();
+        hdr("Loan details");
+        double mp = loan.calculateMonthlyPayment();
+        std::cout << "  Remaining debt    : " << money(loan.getRemainingDebt()) << "\n"
+                  << "  Monthly payment   : " << money(mp) << "\n"
+                  << "  Status            : " << loanStatusColor(loan.getStatus()) << "\n";
+        sep();
+        std::cout << "  [1] Make payment  [2] View full schedule  [0] Back\n";
+        int ch = askInt("Choice: ");
+        try {
+            if (ch == 1) {
+                double amt = askDouble("Amount (monthly = " + std::to_string(mp) + " BGN): ");
+                loan.makePayment(amt);
+                std::cout << "  \033[32m✓ Paid. Remaining: " << money(loan.getRemainingDebt()) << "\033[0m\n";
+            } else if (ch == 2) {
+                auto sched = loan.getPaymentSchedule();
+                std::cout << "\n  Payment schedule (" << sched.size() << " installments):\n";
+                for (size_t i = 0; i < sched.size(); ++i)
+                    std::cout << "    Month " << std::setw(3) << (i + 1) << ":  " << money(sched[i]) << "\n";
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  \033[31m✗ " << e.what() << "\033[0m\n";
+        }
+        pause();
+    }
+}
+
+// ─── Open account flow ─────────────────────────────────────────────────────
+
+static void openAccountFlow(Person* p) {
+    hdr("Open New Account");
+    std::cout << "  [1] Checking  [2] Savings  [3] Credit\n";
+    int type = askInt("Account type: ");
+    std::string iban = askLine("IBAN (e.g. BG80BNBG96611020000001): ");
+    std::string cur  = askLine("Currency (e.g. BGN): ");
+    double bal       = askDouble("Initial balance: ");
+    try {
+        if (type == 1) {
+            double dl = askDouble("Daily limit: ");
+            bool ovd  = (askInt("Overdraft allowed? 1=yes / 0=no: ") == 1);
+            CheckingAccount acc(iban, cur, bal, dl, ovd);
+            p->openAccount(&acc);
+        } else if (type == 2) {
+            double rate = askDouble("Annual interest rate (%): ");
+            int    per  = askInt("Compounding periods per year: ");
+            SavingsAccount acc(iban, cur, bal, rate, per);
+            p->openAccount(&acc);
+        } else if (type == 3) {
+            double lim  = askDouble("Credit limit: ");
+            double pen  = askDouble("Penalty rate (%): ");
+            CreditAccount acc(iban, cur, bal, lim, pen);
+            p->openAccount(&acc);
+        } else {
+            std::cout << "  \033[33m! Unknown type.\033[0m\n"; return;
+        }
+        std::cout << "  \033[32m✓ Account opened.\033[0m\n";
+    } catch (const std::exception& e) {
+        std::cout << "  \033[31m✗ " << e.what() << "\033[0m\n";
+    }
+}
+
+// ─── Client menu ───────────────────────────────────────────────────────────
+
+static void clientMenu(Person* p, ClientManager& mgr) {
+    while (true) {
+        cls();
+        hdr("Client: " + p->getName() + "  [" + p->getClientType() + "]");
+        std::cout << "  Email    : " << p->getEmail() << "\n"
+                  << "  Phone    : " << p->getPhone() << "\n"
+                  << "  Accounts : " << p->getAccounts().size() << "\n"
+                  << "  Loans    : " << p->getLoans().size() << "\n"
+                  << "  Notifs   : " << p->getNotifications().size() << "\n";
+        sep();
+        std::cout << "  [1] Full profile     [2] Open account\n"
+                  << "  [3] Select account   [4] Apply for loan\n"
+                  << "  [5] Manage loans     [6] Notifications\n";
+        sep();
+
+        int ch = askInt("Choice [0=Back]: ");
+        if (ch == 0) return;
+
+        try {
+            switch (ch) {
+
+            case 1:
+                p->printInfo();
+                break;
+
+            case 2:
+                openAccountFlow(p);
+                break;
+
+            case 3: {
+                const auto& accs = p->getAccounts();
+                if (accs.empty()) { std::cout << "  No accounts yet.\n"; break; }
+                std::cout << "\n";
+                for (size_t i = 0; i < accs.size(); ++i)
+                    std::cout << "  [" << i << "]  " << accs[i]->getIban()
+                              << "  [" << accTypeName(accs[i]) << "]  "
+                              << money(accs[i]->getBalance(), accs[i]->getCurrency())
+                              << "  " << statusColor(accs[i]->getStatus()) << "\n";
+                int idx = askInt("Select account: ");
+                if (idx >= 0 && idx < (int)accs.size())
+                    accountMenu(accs[idx], mgr);
+                else
+                    std::cout << "  \033[33m! Invalid selection.\033[0m\n";
+                break;
+            }
+
+            case 4: {
+                double principal = askDouble("Principal amount (BGN): ");
+                double rate      = askDouble("Annual interest rate (%): ");
+                int    months    = askInt("Term (months): ");
+                p->applyForLoan(principal, rate, months);
+                double mp = p->getLoans().back().calculateMonthlyPayment();
+                std::cout << "  \033[32m✓ Loan approved. Monthly payment: "
+                          << money(mp) << "\033[0m\n";
+                break;
+            }
+
+            case 5:
+                loanMenu(p);
+                break;
+
+            case 6: {
+                const auto& ns = p->getNotifications();
+                if (ns.empty()) { std::cout << "  No notifications.\n"; break; }
+                for (const auto& n : ns)
+                    std::cout << "  [" << n.typeToString() << "]  " << n.getMessage() << "\n";
+                break;
+            }
+
+            default:
+                std::cout << "  \033[33m! Unknown option.\033[0m\n";
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  \033[31m✗ " << e.what() << "\033[0m\n";
+        }
+        pause();
+    }
+}
+
+// ─── Main menu ─────────────────────────────────────────────────────────────
+
+static void mainMenu(ClientManager& mgr) {
+    while (true) {
+        cls();
+        hdr("NeoBank Pro");
+        const auto& all = mgr.getAll();
+        std::cout << "  Registered clients: " << all.size() << "\n";
+        sep();
+        std::cout << "  [1] Register individual client\n"
+                  << "  [2] Register corporate client\n"
+                  << "  [3] List all clients\n"
+                  << "  [4] Select client\n"
+                  << "  [0] Exit\n";
+        sep();
+
+        int ch = askInt("Choice: ");
+
+        try {
+            switch (ch) {
+
+            case 0:
+                std::cout << "\n  Goodbye.\n\n";
+                return;
+
+            case 1: {
+                hdr("Register Individual Client");
+                std::string name  = askLine("Full name: ");
+                std::string email = askLine("Email: ");
+                std::string phone = askLine("Phone: ");
+                std::string egn   = askLine("EGN (10 digits): ");
+                std::string dob   = askLine("Date of birth (YYYY-MM-DD): ");
+                std::string addr  = askLine("Address: ");
+                auto* c = mgr.registerIndividual(name, email, phone, egn, dob, addr);
+                std::cout << "  \033[32m✓ Registered: " << c->getName()
+                          << "  (ID " << c->getId() << ")\033[0m\n";
+                break;
+            }
+
+            case 2: {
+                hdr("Register Corporate Client");
+                std::string name  = askLine("Contact name: ");
+                std::string email = askLine("Email: ");
+                std::string phone = askLine("Phone: ");
+                std::string eik   = askLine("EIK (9 or 13 digits): ");
+                std::string comp  = askLine("Company name: ");
+                std::string vat   = askLine("VAT number (leave blank if not registered): ");
+                std::string rep   = askLine("Legal representative: ");
+                auto* c = mgr.registerCorporate(name, email, phone, eik, comp, vat, rep);
+                std::cout << "  \033[32m✓ Registered: " << c->getCompanyName()
+                          << "  (ID " << c->getId() << ")\033[0m\n";
+                break;
+            }
+
+            case 3:
+                std::cout << "\n";
+                mgr.listAll();
+                break;
+
+            case 4: {
+                if (all.empty()) { std::cout << "  No clients registered yet.\n"; break; }
+                std::cout << "\n";
+                for (size_t i = 0; i < all.size(); ++i)
+                    std::cout << "  [" << i << "]  " << all[i]->getName()
+                              << "  (" << all[i]->getClientType() << ")\n";
+                int idx = askInt("Select client: ");
+                if (idx >= 0 && idx < (int)all.size())
+                    clientMenu(all[idx], mgr);
+                else
+                    std::cout << "  \033[33m! Invalid selection.\033[0m\n";
+                break;
+            }
+
+            default:
+                std::cout << "  \033[33m! Unknown option.\033[0m\n";
+            }
+        } catch (const std::exception& e) {
+            std::cout << "  \033[31m✗ Error: " << e.what() << "\033[0m\n";
+        }
+        pause();
+    }
+}
+
+// ─── Demo seed data ────────────────────────────────────────────────────────
+
+static void seed(ClientManager& mgr) {
+    auto* ivan = mgr.registerIndividual(
         "Ivan Petrov", "ivan@example.com", "+359888123456",
-        "9001011234", "1990-01-01", "Sofia, Bulgaria"
-    );
-    std::cout << *ivan << "\n";
+        "9001011234", "1990-01-01", "Sofia, Bulgaria");
+    { CheckingAccount a("BG80BNBG96611020345678", "BGN", 1500.0, 3000.0, false); ivan->openAccount(&a); }
+    { SavingsAccount  a("BG80BNBG96611020345679", "BGN", 5000.0, 3.5, 12);       ivan->openAccount(&a); }
+    ivan->applyForLoan(10000.0, 5.0, 24);
 
-    // Register corporate
-    CorporateClient* firma = manager.registerCorporate(
+    auto* firma = mgr.registerCorporate(
         "Georgi Ivanov", "office@techbg.com", "+35929123456",
-        "123456789", "TechBG EOOD", "BG123456789", "Georgi Ivanov"
-    );
-    std::cout << *firma << "\n";
+        "123456789", "TechBG EOOD", "BG123456789", "Georgi Ivanov");
+    { CheckingAccount a("BG80BNBG96611020345680", "BGN",  8000.0, 5000.0, true); firma->openAccount(&a); }
+    { CreditAccount   a("BG80BNBG96611020345681", "BGN",     0.0, 20000.0, 8.0); firma->openAccount(&a); }
+}
 
-    // Edit via setters
-    ivan->setEmail("ivan.new@example.com");
-    ivan->setAddress("Plovdiv, Bulgaria");
-    std::cout << "Updated email: " << ivan->getEmail() << "\n";
+// ─── Entry point ───────────────────────────────────────────────────────────
 
-    // Edit via >>
-    std::cin >> *firma;
-    std::cout << *firma << "\n";
-
-    // Deactivate
-    ivan->deactivate();
-    std::cout << "Ivan active: " << (ivan->isActive() ? "yes" : "no") << "\n";
-
-    // Try deactivating again — expect error
-    try {
-        ivan->deactivate();
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Invalid registration
-    try {
-        manager.registerIndividual(
-            "Bad Client", "bad@example.com", "+359000000",
-            "12345", "2010-01-01", "Nowhere"
-        );
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // List all
-    manager.listAll();
-
-    // Create and open accounts
-    CheckingAccount* ivanAcc = new CheckingAccount("BG80BNBG96611020345678", "BGN", 1000.0, 500.0, false);
-    ivan->openAccount(ivanAcc);
-    delete ivanAcc;
-
-    SavingsAccount* ivanSavings = new SavingsAccount("BG80BNBG96611020345679", "BGN", 2000.0, 3.5, 12);
-    ivan->openAccount(ivanSavings);
-    delete ivanSavings;
-
-    CheckingAccount* firmaAcc = new CheckingAccount("BG80BNBG96611020345680", "BGN", 5000.0, 2000.0, true);
-    firma->openAccount(firmaAcc);
-    delete firmaAcc;
-
-    // Print accounts
-    std::cout << *static_cast<CheckingAccount*>(ivan->getAccounts()[0]) << "\n";
-    std::cout << *static_cast<SavingsAccount*>(ivan->getAccounts()[1]) << "\n";
-
-    // Deposit
-    ivan->getAccounts()[0]->deposit(500.0, "Salary deposit");
-    std::cout << "After deposit: " << ivan->getAccounts()[0]->getBalance() << "\n";
-
-    // Withdraw
-    ivan->getAccounts()[0]->withdraw(200.0, "Kaufland grocery shopping");
-    std::cout << "After withdraw: " << ivan->getAccounts()[0]->getBalance() << "\n";
-
-    // Transfer from ivan to firma
-    ivan->getAccounts()[0]->transfer(*firma->getAccounts()[0], 100.0, "Utility bill payment");
-    std::cout << "Ivan balance after transfer: " << ivan->getAccounts()[0]->getBalance() << "\n";
-    std::cout << "Firma balance after transfer: " << firma->getAccounts()[0]->getBalance() << "\n";
-
-    // Try withdrawing more than balance — expect error
-    try {
-        ivan->getAccounts()[0]->withdraw(999999.0);
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Lock account and try to deposit — expect error
-    ivan->getAccounts()[0]->lock();
-    try {
-        ivan->getAccounts()[0]->deposit(100.0);
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Apply interest on savings
-    ivan->getAccounts()[1]->applyInterestOrFee();
-    std::cout << "After interest: " << ivan->getAccounts()[1]->getBalance() << "\n";
-
-    std::cout << "\n-- Ivan's account transactions --\n";
-    for (const Transaction& t : ivan->getAccounts()[0]->getTransactions())
-        std::cout << t << "\n";
-    
-    // Filter by type
-    std::cout << "\n-- Deposits only --\n";
-    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByType(TransactionType::DEPOSIT))
-        std::cout << t << "\n";
-
-    // Filter by min amount
-    std::cout << "\n-- Transactions above 300 BGN --\n";
-    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByMinAmount(300.0))
-        std::cout << t << "\n";
-
-    // Filter by date range — from start of today to now
-    std::time_t startOfDay = std::time(nullptr) - 86400;
-    std::time_t now = std::time(nullptr);
-    std::cout << "\n-- Transactions in last 24 hours --\n";
-    for (const Transaction& t : ivan->getAccounts()[0]->getTransactionsByDateRange(startOfDay, now))
-        std::cout << t << "\n";
-
-    // Monthly statement
-    std::cout << "\n";
-    ivan->getAccounts()[0]->printMonthlyStatement(5, 2026);
-
-    // --- Functionality 6: Financial analysis and categorization ---
-    std::cout << "\n-- Functionality 6: Category report --\n";
-
-    // Open a fresh checking account for firma to demo categorization
-    CheckingAccount* demoAcc = new CheckingAccount("BG80BNBG96611020345681", "BGN", 3000.0, 1000.0, false);
-    firma->openAccount(demoAcc);
-    delete demoAcc;
-    Account* acc = firma->getAccounts()[1];
-
-    acc->withdraw(45.0,  "Lidl grocery run");
-    acc->withdraw(30.0,  "Uber ride to airport");
-    acc->withdraw(80.0,  "Electricity bill payment");
-    acc->withdraw(25.0,  "Netflix subscription");
-    acc->withdraw(60.0,  "Pharmacy medicine");
-    acc->withdraw(120.0, "Amazon online purchase");
-    acc->withdraw(35.0,  "Restaurant dinner");
-    acc->withdraw(20.0,  "Bus transport card");
-    acc->withdraw(15.0,  "Concert ticket entertainment");
-    acc->withdraw(50.0,  "Zara clothes shop");
-
-    std::time_t from = std::time(nullptr) - 86400;
-    std::time_t to   = std::time(nullptr) + 1;
-    acc->printCategoryReport(from, to);
-
-    // --- Functionality 7: Limits and notifications ---
-    std::cout << "\n-- Functionality 7: Limits and notifications --\n";
-
-    CheckingAccount* limitAcc = new CheckingAccount("BG80BNBG96611020345682", "BGN", 2000.0, 500.0, false);
-    ivan->openAccount(limitAcc);
-    delete limitAcc;
-    Account* lacc = ivan->getAccounts()[2];
-
-    // Set limits: daily 300, single tx 200, min balance alert 1800
-    lacc->setLimitSettings(LimitSettings(300.0, 200.0, 1800.0));
-
-    // Withdraw 100 — under limits, balance stays above 1800 — no notification
-    lacc->withdraw(100.0, "Kaufland groceries");
-    std::cout << "Balance after 100 withdraw: " << lacc->getBalance() << " BGN\n";
-
-    // Withdraw 150 — balance drops to 1750 < 1800 — LOW_BALANCE notification
-    lacc->withdraw(150.0, "Zara shopping");
-    std::cout << "Balance after 150 withdraw: " << lacc->getBalance() << " BGN\n";
-
-    // Exceeds single tx limit (> 200) — should throw and add LIMIT_REACHED notification
-    try {
-        lacc->withdraw(250.0, "Big purchase");
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Exceeds daily limit (100 + 150 = 250 spent; 300 - 250 = 50 left; 80 > 50) — LIMIT_REACHED
-    try {
-        lacc->withdraw(80.0, "Another shop");
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Print account notifications
-    std::cout << "\nAccount notifications (" << lacc->getNotifications().size() << "):\n";
-    for (const Notification& n : lacc->getNotifications())
-        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
-
-    // Person-level notifications
-    ivan->addNotification(Notification("Welcome to NeoBank!", NotificationType::GENERAL));
-    std::cout << "\nPerson notifications (" << ivan->getNotifications().size() << "):\n";
-    for (const Notification& n : ivan->getNotifications())
-        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
-
-    // --- Functionality 8: Interest and fee accrual ---
-    std::cout << "\n-- Functionality 8: Interest and fees --\n";
-
-    // SavingsAccount: apply periodic interest (3.5% / 12 periods)
-    Account* savAcc = ivan->getAccounts()[1];
-    double balBefore = savAcc->getBalance();
-    savAcc->applyInterestOrFee();
-    std::cout << "Savings interest: " << balBefore << " -> " << savAcc->getBalance() << " BGN\n";
-
-    // CheckingAccount: apply monthly maintenance fee
-    Account* chkAcc = ivan->getAccounts()[2]; // the limit demo account
-    double chkBefore = chkAcc->getBalance();
-    chkAcc->applyInterestOrFee();
-    std::cout << "Checking fee:     " << chkBefore << " -> " << chkAcc->getBalance() << " BGN\n";
-    std::cout << "CheckingAccount notifications:\n";
-    for (const Notification& n : chkAcc->getNotifications())
-        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
-
-    // CreditAccount: use credit then apply penalty
-    CreditAccount* creditAcc = new CreditAccount("BG80BNBG96611020345683", "BGN", 500.0, 2000.0, 10.0);
-    firma->openAccount(creditAcc);
-    delete creditAcc;
-    CreditAccount* cacc = static_cast<CreditAccount*>(firma->getAccounts()[2]);
-
-    cacc->withdraw(1000.0, "Equipment purchase"); // draws 500 from balance + 500 from credit
-    std::cout << "\nCredit account after 1000 withdraw:\n"
-              << "  Balance:     " << cacc->getBalance() << " BGN\n"
-              << "  Used credit: " << cacc->getUsedCredit() << " BGN\n"
-              << "  Available:   " << cacc->getAvailableCredit() << " BGN\n";
-
-    cacc->applyInterestOrFee(); // 10% penalty on 500 used credit = 50 BGN
-    std::cout << "After penalty (10%): used credit = " << cacc->getUsedCredit() << " BGN\n";
-    std::cout << "CreditAccount notifications:\n";
-    for (const Notification& n : cacc->getNotifications())
-        std::cout << "  [" << n.typeToString() << "] " << n.getMessage() << "\n";
-
-    // Loan overdue penalty
-    std::cout << "\nLoan overdue penalty:\n";
-    firma->applyForLoan(5000.0, 6.0, 12);
-    Loan& overdueLoan = firma->getLoans()[0];
-    std::cout << "  Remaining debt before: " << overdueLoan.getRemainingDebt() << " BGN\n";
-    overdueLoan.applyOverduePenalty(); // not overdue yet — no change
-    std::cout << "  After applyOverduePenalty (not overdue): " << overdueLoan.getRemainingDebt() << " BGN\n";
-
-    // --- Functionality 5: Loan system ---
-    std::cout << "\n-- Loan system --\n";
-
-    // Apply for a loan: 10 000 BGN, 5% annual interest, 24 months
-    firma->applyForLoan(10000.0, 5.0, 24);
-    Loan& loan = firma->getLoans().back();
-
-    std::cout << "Monthly payment: " << loan.calculateMonthlyPayment() << " BGN\n";
-    std::cout << "Remaining debt:  " << loan.getRemainingDebt() << " BGN\n";
-
-    // Print first 3 installments from the payment schedule
-    std::vector<double> schedule = loan.getPaymentSchedule();
-    std::cout << "Payment schedule (" << schedule.size() << " installments):\n";
-    for (int i = 0; i < 3; ++i)
-        std::cout << "  Month " << (i + 1) << ": " << schedule[i] << " BGN\n";
-    std::cout << "  ...\n";
-
-    // Make two payments
-    loan.makePayment(loan.calculateMonthlyPayment());
-    loan.makePayment(loan.calculateMonthlyPayment());
-    std::cout << "After 2 payments, remaining debt: " << loan.getRemainingDebt() << " BGN\n";
-
-    // checkOverdue — loan just started so should still be ACTIVE
-    loan.checkOverdue();
-    std::cout << "Status: " << (loan.getStatus() == LoanStatus::ACTIVE ? "ACTIVE" : "OVERDUE") << "\n";
-    std::cout << "isOverdue: " << (loan.isOverdue() ? "yes" : "no") << "\n";
-
-    // Try invalid loan
-    try {
-        firma->applyForLoan(-500.0, 5.0, 12);
-    } catch (const std::exception& e) {
-        std::cout << "Caught: " << e.what() << "\n";
-    }
-
-    // Pay off a second loan fully
-    firma->applyForLoan(500.0, 3.0, 6);
-    Loan& smallLoan = firma->getLoans().back();
-    double monthly = smallLoan.calculateMonthlyPayment();
-    for (int i = 0; i < 6; ++i)
-        smallLoan.makePayment(monthly);
-    std::cout << "Small loan status: " << (smallLoan.getStatus() == LoanStatus::PAID ? "PAID" : "ACTIVE") << "\n";
-    std::cout << "Remaining debt: " << smallLoan.getRemainingDebt() << " BGN\n";
-
+int main() {
+    ClientManager mgr;
+    seed(mgr);
+    mainMenu(mgr);
     return 0;
 }

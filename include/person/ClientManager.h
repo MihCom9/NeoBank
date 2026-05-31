@@ -31,5 +31,6 @@ public:
                                         const std::string& representative);
 
     Person* findById(int id) const;
+    const std::vector<Person*>& getAll() const noexcept;
     void listAll() const;
 };
